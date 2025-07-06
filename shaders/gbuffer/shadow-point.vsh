@@ -1,6 +1,5 @@
 #version 430 core
 
-//#include "/lib/constants.glsl"
 #include "/settings.glsl"
 
 out CustomVertexData {

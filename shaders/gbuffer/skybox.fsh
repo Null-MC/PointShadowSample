@@ -1,6 +1,6 @@
 #version 430 core
 
-#include "/settings.glsl"
+//#include "/settings.glsl"
 
 layout(location = 0) out vec4 outColor;
 
@@ -8,5 +8,6 @@ layout(location = 0) out vec4 outColor;
 
 
 void iris_emitFragment() {
-    outColor = vec4(ap.world.fogColor.rgb, 1.0);
+    vec3 fogColor = RgbToLinear(ap.world.fogColor.rgb);
+    outColor = vec4(fogColor, 1.0);
 }

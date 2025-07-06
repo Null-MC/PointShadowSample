@@ -1,14 +1,16 @@
 float getLightAttenuation(const in float lightDist, const in float lightRange) {
     float lightDistF = lightDist / lightRange;
-    return 1.0 - saturate(lightDistF);
+    lightDistF = 1.0 - saturate(lightDistF);
+    return lightDistF*lightDistF;
 }
 
-float sample_PointLightShadow(const in vec3 sampleDir, const in float sampleDist, const in uint index) {
+// returns a hardware-filtered point-light shadow map sample
+float shadowPoint_sampleShadow(const in vec3 sampleDir, const in float sampleDist, const in uint index) {
     float depth = (sampleDist - ap.point.nearPlane) / (ap.point.farPlane - ap.point.nearPlane);
     return texture(pointLightFiltered, vec4(sampleDir, index), depth).r;
 }
 
-vec3 sample_AllPointLights(const in vec3 localPos, const in vec3 localNormal) {
+vec3 shadowPoint_sampleAll(const in vec3 localPos, const in vec3 localNormal) {
     vec3 localViewDir = -normalize(localPos);
 
     const float offsetBias = 0.02;
@@ -35,7 +37,7 @@ vec3 sample_AllPointLights(const in vec3 localPos, const in vec3 localNormal) {
 
         float NoLm = max(dot(localNormal, sampleDir), 0.0);
 
-        float lightShadow = sample_PointLightShadow(-sampleDir, sampleDist - offsetBias, i);
+        float lightShadow = shadowPoint_sampleShadow(-sampleDir, sampleDist - offsetBias, i);
 
         lightShadow *= getLightAttenuation(sampleDist, lightRange);
 

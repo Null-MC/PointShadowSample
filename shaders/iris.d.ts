@@ -43,6 +43,43 @@ declare class WorldSettings {
  */
 declare var worldSettings: WorldSettings;
 
+/**
+ * The settings for point-light shadows.
+ */
+declare class PointShadowSettings {
+    /**
+     * The resolution for point-light shadow maps. Must be set in initShader().
+     */
+    resolution: number;
+    /**
+     * The maximum number of point-light shadows that can exist per-frame. Must be set in initShader()
+     */
+    maxCount: number;
+    /**
+     * The maximum number of point-light shadow-maps that can be updated per-frame.
+     */
+    maxUpdates: number;
+    /**
+     * The number of nearest lights (to camera) that will include entities and be updated every frame.
+     */
+    realTimeCount: number;
+    /**
+     * Allows caching of terrain rendering for realtime lights.
+     */
+    cacheRealTimeTerrain: boolean;
+    /**
+     * The minimum threshold in ranking [0.0-1.0] that is required for a pending light to replace an existing light.
+     */
+    updateThreshold: number;
+    nearPlane: number;
+    farPlane: number;
+}
+
+/**
+ * For details, read {@link PointShadowSettings}.
+ */
+declare var pointShadowSettings: PointShadowSettings;
+
 // Formats/stages/usages
 
 /**
@@ -822,6 +859,7 @@ declare namespace Usage {
   let WEATHER: ProgramUsage;
   let HAND: ProgramUsage;
   let TRANSLUCENT_HAND: ProgramUsage;
+  let POINT: ProgramUsage;
   let SHADOW: ProgramUsage;
   let SHADOW_TEXTURED: ProgramUsage;
   let SHADOW_TERRAIN_SOLID: ProgramUsage;

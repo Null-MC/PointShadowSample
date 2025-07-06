@@ -1,6 +1,5 @@
 #version 430 core
 
-//#include "/lib/constants.glsl"
 #include "/settings.glsl"
 
 in CustomVertexData {
@@ -12,8 +11,6 @@ in CustomVertexData {
 out float gl_FragDepth;
 
 #include "/lib/common.glsl"
-
-//#include "/lib/material/material.glsl"
 
 
 void iris_emitFragment() {
@@ -29,16 +26,8 @@ void iris_emitFragment() {
 
     float alpha = iris_sampleBaseTexLod(mUV, LOD).a;
 
-//    #ifdef LIGHTING_SHADOW_EMISSION_MASK
-//        if (clamp(vIn.modelPos, -0.5, 0.5) == vIn.modelPos) {
-//            vec4 specularData = iris_sampleSpecularMapLod(vIn.uv, LOD);
-//            float emission = mat_emission(specularData);
-//            if (emission > 0.0) alpha = 0.0;
-//        }
-//    #else
-        float near = vIn.isFull ? 0.5 : 0.49999;
-        if (clamp(vIn.modelPos, -near, near) == vIn.modelPos) alpha = 0.0;
-//    #endif
+    float near = vIn.isFull ? 0.5 : 0.49999;
+    if (clamp(vIn.modelPos, -near, near) == vIn.modelPos) alpha = 0.0;
 
     const float alphaThreshold = 0.2;
     if (alpha < alphaThreshold) discard;

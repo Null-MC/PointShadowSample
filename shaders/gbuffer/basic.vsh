@@ -33,6 +33,4 @@ void iris_sendParameters(VertexData data) {
         vOut.color = data.color;
         vOut.color.rgb *= data.ao;
     #endif
-
-    //vOut.viewDist = length(data.modelPos);
 }
