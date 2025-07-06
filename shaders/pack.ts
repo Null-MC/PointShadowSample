@@ -84,10 +84,12 @@ export function setupShader(dimension : NamespacedId) {
         .clear(false)
         .build();
 
-    registerShader(new ObjectShader('point-shadow', Usage.POINT)
-        .vertex('gbuffer/shadow-point.vsh')
-        .fragment('gbuffer/shadow-point.fsh')
-        .build());
+    if (pointShadowSettings.maxCount > 0) {
+        registerShader(new ObjectShader('point-shadow', Usage.POINT)
+            .vertex('gbuffer/shadow-point.vsh')
+            .fragment('gbuffer/shadow-point.fsh')
+            .build());
+    }
 
     registerShader(new ObjectShader('skybox', Usage.SKYBOX)
         .vertex('gbuffer/skybox.vsh')

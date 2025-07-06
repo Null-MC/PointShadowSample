@@ -35,7 +35,7 @@ void iris_emitFragment() {
     vec2 lmcoord = vIn.light;
 
     #ifdef POINT_SHADOW_ENABLED
-        bool isInPointShadowBounds = shadowPoint_isInBounds(vIn.localPos);
+        bool isInPointShadowBounds = pointShadow_isInBounds(vIn.localPos);
 
         if (isInPointShadowBounds) lmcoord.x = (0.5/16.0);
     #endif
