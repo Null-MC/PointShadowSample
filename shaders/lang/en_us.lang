@@ -14,3 +14,11 @@ option.POINT_SHADOW_MAX_UPDATES.comment=The maximum number of point-light shadow
 option.POINT_SHADOW_THRESHOLD=Update Threshold
 option.POINT_SHADOW_THRESHOLD.comment=The minimum threshold in rank required for active lights to be replaced with a pending one. Lower values will cause more frequent updates.
 suffix.POINT_SHADOW_THRESHOLD=%
+
+option.POINT_SHADOW_BIN_ENABLED=Local Light Bins
+option.POINT_SHADOW_BIN_ENABLED.comment=Enables creation of smaller localized light lists to reduce sampling cost.
+
+option.POINT_SHADOW_BIN_COUNT=Bin Max Count
+option.POINT_SHADOW_BIN_COUNT.comment=The maximum number of lights each local bin can hold.
+
+option.POINT_SHADOW_DEBUG=Show Active Count

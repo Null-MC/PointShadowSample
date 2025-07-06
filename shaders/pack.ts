@@ -1,5 +1,8 @@
 import type {} from 'iris'
 
+const pointShadow_regionSize = 128;
+const pointShadow_binSize = 8;
+
 
 export function initShader(dimension : NamespacedId) {
     worldSettings.disableShade = false;
@@ -13,13 +16,14 @@ export function initShader(dimension : NamespacedId) {
     pointShadowSettings.cacheRealTimeTerrain = true;
 }
 
-function applySettings() {
+function applyRealTimeSettings() {
     pointShadowSettings.realTimeCount = getIntSetting('POINT_SHADOW_REALTIME_COUNT');
     pointShadowSettings.maxUpdates = getIntSetting('POINT_SHADOW_MAX_UPDATES');
     pointShadowSettings.updateThreshold = getIntSetting('POINT_SHADOW_THRESHOLD') * 0.01;
 }
 
 export function setupShader(dimension : NamespacedId) {
+    // Custom Light Colors
     setLightColorEx('#362b21', 'brown_mushroom');
     setLightColorEx('#f39849', 'campfire');
     setLightColorEx('#935b2c', 'cave_vines', "cave_vines_plant");
@@ -71,14 +75,27 @@ export function setupShader(dimension : NamespacedId) {
         "brown_candle", "red_candle", "orange_candle", "yellow_candle", "lime_candle", "green_candle", "cyan_candle",
         "light_blue_candle", "blue_candle", "purple_candle", "magenta_candle", "pink_candle");
 
+    // Define Global Settings
+    let lightListEnabled = false;
+    let lightListBinCount = 0;
     if (pointShadowSettings.maxCount > 0) {
         defineGlobally('POINT_SHADOW_ENABLED', 1);
         defineGlobally('POINT_SHADOW_MAX_COUNT', pointShadowSettings.maxCount);
 
         if (getBoolSetting('POINT_SHADOW_DEBUG'))
             defineGlobally('POINT_SHADOW_DEBUG', 1);
+
+        lightListEnabled = getBoolSetting('POINT_SHADOW_BIN_ENABLED');
+
+        if (lightListEnabled) {
+            defineGlobally('POINT_SHADOW_BIN_ENABLED', 1);
+
+            lightListBinCount = getIntSetting('POINT_SHADOW_BIN_COUNT');
+            defineGlobally('POINT_SHADOW_BIN_COUNT', lightListBinCount);
+        }
     }
 
+    // Create Textures & Buffers
     const texFinal = new Texture('texFinal')
         .format(Format.RGBA16F)
         .width(screenWidth)
@@ -86,6 +103,51 @@ export function setupShader(dimension : NamespacedId) {
         .mipmap(false)
         .clear(false)
         .build();
+
+    let lightListBuffer: BuiltBuffer | null = null;
+    if (lightListEnabled) {
+        const binByteSize = 4 * (1 + lightListBinCount * 2);
+        const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
+        const bufferSize = binByteSize * cubed(binsPerAxis) + 4;
+        print(`Light-List Buffer Size: ${bufferSize.toLocaleString()}`);
+
+        lightListBuffer = new GPUBuffer(bufferSize)
+            .clear(false)
+            .build();
+    }
+
+    // Build Shader Pipeline
+    if (lightListEnabled && pointShadowSettings.maxCount > 0) {
+        // clear light lists
+        const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
+        const binGroupCount = Math.ceil(binsPerAxis / 8);
+
+        print(`light list clear bounds: [${binGroupCount}]^3`);
+
+        registerShader(Stage.PRE_RENDER, new Compute('light-list-clear')
+            .location('pre/light-list-clear.csh')
+            .workGroups(binGroupCount, binGroupCount, binGroupCount)
+            .ssbo(0, lightListBuffer)
+            .build());
+
+        // populate local light bins from global light list
+        const pointGroupCount = Math.ceil(pointShadowSettings.maxCount / (8*8*8));
+
+        registerShader(Stage.PRE_RENDER, new Compute('light-list')
+            .location('pre/light-list.csh')
+            .workGroups(pointGroupCount, pointGroupCount, pointGroupCount)
+            .ssbo(0, lightListBuffer)
+            .build());
+
+        // populate neighboring local light bins with current bins data
+        registerBarrier(Stage.PRE_RENDER, new MemoryBarrier(SSBO_BIT));
+
+        registerShader(Stage.PRE_RENDER, new Compute('light-list-neighbors')
+            .location('pre/light-list-neighbors.csh')
+            .workGroups(binGroupCount, binGroupCount, binGroupCount)
+            .ssbo(0, lightListBuffer)
+            .build());
+    }
 
     if (pointShadowSettings.maxCount > 0) {
         registerShader(new ObjectShader('point-shadow', Usage.POINT)
@@ -100,30 +162,38 @@ export function setupShader(dimension : NamespacedId) {
         .target(0, texFinal)
         .build());
 
-    registerShader(new ObjectShader('terrain', Usage.TEXTURED)
+    const terrainShader = new ObjectShader('terrain', Usage.TEXTURED)
         .vertex('gbuffer/basic.vsh')
         .fragment('gbuffer/basic.fsh')
         .target(0, texFinal)
-        .define('RENDER_TERRAIN', '1')
-        .build());
+        .define('RENDER_TERRAIN', '1');
 
-    registerShader(new ObjectShader('entities', Usage.ENTITY_SOLID)
+    const entitiesShader = new ObjectShader('entities', Usage.ENTITY_SOLID)
         .vertex('gbuffer/basic.vsh')
         .fragment('gbuffer/basic.fsh')
         .target(0, texFinal)
-        .define('RENDER_ENTITIES', '1')
+        .define('RENDER_ENTITIES', '1');
+
+    if (lightListEnabled) {
+        terrainShader.ssbo(0, lightListBuffer);
+        entitiesShader.ssbo(0, lightListBuffer);
+    }
+
+    registerShader(terrainShader.build());
+    registerShader(entitiesShader.build());
+
+    setCombinationPass(new CombinationPass('post/final.fsh')
         .build());
 
-    setCombinationPass(new CombinationPass('gbuffer/final.fsh')
-        .build());
-
-    applySettings();
+    applyRealTimeSettings();
 }
 
 export function onSettingsChanged(state : WorldState) {
-    applySettings();
+    applyRealTimeSettings();
 }
 
+
+// HELPERS
 
 export function hexToRgb(hex: string) {
     const bigint = parseInt(hex.substring(1), 16);
@@ -137,3 +207,5 @@ export function setLightColorEx(hex: string, ...blocks: string[]) {
     const color = hexToRgb(hex);
     blocks.forEach(block => setLightColor(new NamespacedId(block), color.r, color.g, color.b, 255));
 }
+
+function cubed(x) {return x*x*x;}

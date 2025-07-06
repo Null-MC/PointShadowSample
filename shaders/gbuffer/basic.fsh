@@ -20,8 +20,12 @@ uniform samplerCubeArrayShadow pointLightFiltered;
 #include "/lib/common.glsl"
 
 #ifdef POINT_SHADOW_ENABLED
-    #include "/lib/shadow-point/common.glsl"
-    #include "/lib/shadow-point/sample.glsl"
+    #ifdef POINT_SHADOW_BIN_ENABLED
+        #include "/lib/light-list/buffer.glsl"
+    #endif
+
+    #include "/lib/point-shadow/common.glsl"
+    #include "/lib/point-shadow/sample.glsl"
 #endif
 
 

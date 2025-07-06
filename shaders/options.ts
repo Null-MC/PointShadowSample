@@ -9,6 +9,9 @@ export function setupOptions() {
         .add(asIntRange('POINT_SHADOW_MAX_UPDATES', 4, 1, 16, 1, false))
         .add(asIntRange('POINT_SHADOW_THRESHOLD', 8, 2, 50, 2, false))
         .add(EMPTY)
+        .add(asBool('POINT_SHADOW_BIN_ENABLED', false, true))
+        .add(asIntRange('POINT_SHADOW_BIN_COUNT', 32, 2, 64, 2, true))
+        .add(EMPTY)
         .add(asBool('POINT_SHADOW_DEBUG', false, true))
         .build();
 }
