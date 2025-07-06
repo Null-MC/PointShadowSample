@@ -1,7 +1,5 @@
 #version 430 core
 
-#include "/settings.glsl"
-
 in CustomVertexData {
     vec4 color;
     vec2 light;
@@ -9,6 +7,10 @@ in CustomVertexData {
     vec3 localPos;
     vec3 localNormal;
     vec3 viewNormal;
+
+    #ifdef RENDER_TERRAIN
+        flat uint blockId;
+    #endif
 } vIn;
 
 layout(location = 0) out vec4 outColor;
@@ -17,7 +19,7 @@ uniform samplerCubeArrayShadow pointLightFiltered;
 
 #include "/lib/common.glsl"
 
-#if POINT_SHADOW_MAX_COUNT > 0
+#ifdef POINT_SHADOW_ENABLED
     #include "/lib/shadow-point/common.glsl"
     #include "/lib/shadow-point/sample.glsl"
 #endif
@@ -30,10 +32,13 @@ void iris_emitFragment() {
     // Alpha test.
     if (iris_discardFragment(color)) {discard; return;}
 
-    bool isInPointShadowBounds = shadowPoint_isInBounds(vIn.localPos);
-
     vec2 lmcoord = vIn.light;
-    if (isInPointShadowBounds) lmcoord.x = (0.5/16.0);
+
+    #ifdef POINT_SHADOW_ENABLED
+        bool isInPointShadowBounds = shadowPoint_isInBounds(vIn.localPos);
+
+        if (isInPointShadowBounds) lmcoord.x = (0.5/16.0);
+    #endif
 
     vec3 lightmap = iris_sampleLightmap(lmcoord).rgb;
 
@@ -43,10 +48,16 @@ void iris_emitFragment() {
     vec3 skyLightViewDir = normalize(ap.celestial.pos);
     lightmap *= max(0.2, dot(viewNormal, skyLightViewDir) * 0.5 + 0.5);
 
-    #if POINT_SHADOW_MAX_COUNT > 0
+    #ifdef POINT_SHADOW_ENABLED
         if (isInPointShadowBounds) {
             vec3 localNormal = normalize(vIn.localNormal);
             vec3 pointLighting = shadowPoint_sampleAll(vIn.localPos, localNormal);
+
+            #ifdef RENDER_TERRAIN
+                // for terrain only, apply self-emission to replace lightmap block light
+                int emission = iris_getEmission(vIn.blockId);
+                pointLighting += emission / 15.0;
+            #endif
 
             // apply a simple tonemap to only point-lighting
             lightmap += pointLighting / (1.0 + pointLighting);

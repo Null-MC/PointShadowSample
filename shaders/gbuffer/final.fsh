@@ -1,7 +1,5 @@
 #version 430 core
 
-#include "/settings.glsl"
-
 layout(location = 0) out vec4 outColor;
 
 uniform sampler2D texFinal;
@@ -15,7 +13,7 @@ void main() {
     ivec2 iuv = ivec2(gl_FragCoord.xy);
     vec3 color = texelFetch(texFinal, iuv, 0).rgb;
 
-    #if POINT_SHADOW_MAX_COUNT > 0
+    #ifdef POINT_SHADOW_ENABLED
         if (!ap.game.guiHidden) {
             beginText(ivec2(gl_FragCoord.xy * 0.5), ivec2(4, ap.game.screenSize.y/2 - 8));
             text.bgCol = vec4(0.0, 0.0, 0.0, 0.6);

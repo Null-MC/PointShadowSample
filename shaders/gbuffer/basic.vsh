@@ -1,7 +1,5 @@
 #version 430 core
 
-#include "/settings.glsl"
-
 out CustomVertexData {
     vec4 color;
     vec2 light;
@@ -9,6 +7,10 @@ out CustomVertexData {
     vec3 localPos;
     vec3 localNormal;
     vec3 viewNormal;
+
+    #ifdef RENDER_TERRAIN
+        flat uint blockId;
+    #endif
 } vOut;
 
 #include "/lib/common.glsl"
@@ -32,5 +34,9 @@ void iris_sendParameters(VertexData data) {
     #else
         vOut.color = data.color;
         vOut.color.rgb *= data.ao;
+    #endif
+
+    #ifdef RENDER_TERRAIN
+        vOut.blockId = data.blockId;
     #endif
 }

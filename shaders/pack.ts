@@ -20,8 +20,6 @@ function applySettings() {
 }
 
 export function setupShader(dimension : NamespacedId) {
-    defineGlobally('POINT_SHADOW_MAX_COUNT', pointShadowSettings.maxCount);
-
     setLightColorEx('#362b21', 'brown_mushroom');
     setLightColorEx('#f39849', 'campfire');
     setLightColorEx('#935b2c', 'cave_vines', "cave_vines_plant");
@@ -72,6 +70,11 @@ export function setupShader(dimension : NamespacedId) {
     setLightColorEx("#c07047", "candle", "white_candle", "light_gray_candle", "gray_candle", "black_candle",
         "brown_candle", "red_candle", "orange_candle", "yellow_candle", "lime_candle", "green_candle", "cyan_candle",
         "light_blue_candle", "blue_candle", "purple_candle", "magenta_candle", "pink_candle");
+
+    if (pointShadowSettings.maxCount > 0) {
+        defineGlobally('POINT_SHADOW_ENABLED', 1);
+        defineGlobally('POINT_SHADOW_MAX_COUNT', pointShadowSettings.maxCount);
+    }
 
     const texFinal = new Texture('texFinal')
         .format(Format.RGBA16F)

@@ -1,7 +1,5 @@
 #version 430 core
 
-#include "/settings.glsl"
-
 in CustomVertexData {
     vec3 modelPos;
     flat bool isFull;
