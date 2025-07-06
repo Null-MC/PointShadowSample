@@ -1,6 +1,11 @@
-float GetLightAttenuation(const in float lightDist, const in float lightRange) {
+float getLightAttenuation(const in float lightDist, const in float lightRange) {
     float lightDistF = lightDist / lightRange;
     return 1.0 - saturate(lightDistF);
+}
+
+float sample_PointLightShadow(const in vec3 sampleDir, const in float sampleDist, const in uint index) {
+    float depth = (sampleDist - ap.point.nearPlane) / (ap.point.farPlane - ap.point.nearPlane);
+    return texture(pointLightFiltered, vec4(sampleDir, index), depth).r;
 }
 
 vec3 sample_AllPointLights(const in vec3 localPos, const in vec3 localNormal) {
@@ -18,7 +23,6 @@ vec3 sample_AllPointLights(const in vec3 localPos, const in vec3 localNormal) {
         if (light.block == -1) continue;
 
         float lightRange = iris_getEmission(light.block);
-        vec3 lightColor = iris_getLightColor(light.block).rgb;
 
         vec3 fragToLight = light.pos - localSamplePos;
         float sampleDist = length(fragToLight);
@@ -26,13 +30,14 @@ vec3 sample_AllPointLights(const in vec3 localPos, const in vec3 localNormal) {
 
         if (sampleDist >= lightRange) continue;
 
+        vec3 lightColor = iris_getLightColor(light.block).rgb;
         lightColor = RgbToLinear(lightColor);
 
         float NoLm = max(dot(localNormal, sampleDir), 0.0);
 
-        float lightShadow = sample_PointLight(-fragToLight, lightRange, offsetBias, i);
+        float lightShadow = sample_PointLightShadow(-sampleDir, sampleDist - offsetBias, i);
 
-        lightShadow *= GetLightAttenuation(sampleDist, lightRange);
+        lightShadow *= getLightAttenuation(sampleDist, lightRange);
 
         lighting += NoLm * lightShadow * lightColor;
     }

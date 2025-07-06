@@ -26,7 +26,7 @@ void iris_emitFragment() {
     vec4 color = iris_sampleBaseTex(vIn.uv) * vIn.color;
 
     // Alpha test.
-    if (iris_discardFragment(outColor)) discard;
+    if (iris_discardFragment(color)) discard;
 
     vec3 lightmap_block = iris_sampleLightmap(vec2(vIn.light.x, (0.5/16.0))).rgb;
     vec3 lightmap_sky = iris_sampleLightmap(vec2((0.5/16.0), vIn.light.y)).rgb;

@@ -34,6 +34,12 @@ export function setupShader(dimension : NamespacedId) {
         .fragment('gbuffer/shadow-point.fsh')
         .build());
 
+    registerShader(new ObjectShader('skybox', Usage.SKYBOX)
+        .vertex('gbuffer/skybox.vsh')
+        .fragment('gbuffer/skybox.fsh')
+        .target(0, texFinal)
+        .build());
+
     registerShader(new ObjectShader('terrain', Usage.TEXTURED)
         .vertex('gbuffer/basic.vsh')
         .fragment('gbuffer/basic.fsh')
