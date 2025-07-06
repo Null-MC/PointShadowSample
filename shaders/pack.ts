@@ -74,6 +74,9 @@ export function setupShader(dimension : NamespacedId) {
     if (pointShadowSettings.maxCount > 0) {
         defineGlobally('POINT_SHADOW_ENABLED', 1);
         defineGlobally('POINT_SHADOW_MAX_COUNT', pointShadowSettings.maxCount);
+
+        if (getBoolSetting('POINT_SHADOW_DEBUG'))
+            defineGlobally('POINT_SHADOW_DEBUG', 1);
     }
 
     const texFinal = new Texture('texFinal')

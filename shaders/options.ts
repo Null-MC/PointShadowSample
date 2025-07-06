@@ -8,6 +8,8 @@ export function setupOptions() {
         .add(asIntRange('POINT_SHADOW_REALTIME_COUNT', 4, 0, 32, 1, false))
         .add(asIntRange('POINT_SHADOW_MAX_UPDATES', 4, 1, 16, 1, false))
         .add(asIntRange('POINT_SHADOW_THRESHOLD', 8, 2, 50, 2, false))
+        .add(EMPTY)
+        .add(asBool('POINT_SHADOW_DEBUG', false, true))
         .build();
 }
 
