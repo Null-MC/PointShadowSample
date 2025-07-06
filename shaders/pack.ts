@@ -7,15 +7,15 @@ export function initShader(dimension : NamespacedId) {
 
     pointShadowSettings.nearPlane = 0.1;
     pointShadowSettings.farPlane = 16.0;
-    pointShadowSettings.maxCount = 64;
-    pointShadowSettings.resolution = 256;
+    pointShadowSettings.maxCount = getIntSetting('POINT_SHADOW_MAX_COUNT');
+    pointShadowSettings.resolution = getIntSetting('POINT_SHADOW_RESOLUTION');
     pointShadowSettings.cacheRealTimeTerrain = true;
 }
 
 function applySettings() {
-    pointShadowSettings.maxUpdates = 4;
-    pointShadowSettings.realTimeCount = 4;
-    pointShadowSettings.updateThreshold = 0.08;
+    pointShadowSettings.realTimeCount = getIntSetting('POINT_SHADOW_REALTIME_COUNT');
+    pointShadowSettings.maxUpdates = getIntSetting('POINT_SHADOW_MAX_UPDATES');
+    pointShadowSettings.updateThreshold = getIntSetting('POINT_SHADOW_THRESHOLD') * 0.01;
 }
 
 export function setupShader(dimension : NamespacedId) {

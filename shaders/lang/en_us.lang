@@ -1,0 +1,16 @@
+option.POINT_SHADOW_MAX_COUNT=Max Count
+option.POINT_SHADOW_MAX_COUNT.comment=The maximum number of shadowed point-lights that can be active per frame.
+
+option.POINT_SHADOW_RESOLUTION=Resolution
+option.POINT_SHADOW_RESOLUTION.comment=The resolution for point-light shadow maps, per cubemap face.
+suffix.POINT_SHADOW_RESOLUTION=x
+
+option.POINT_SHADOW_REALTIME_COUNT=Real-Time Count
+option.POINT_SHADOW_REALTIME_COUNT.comment=The number of lights to refresh every frame, for real-time entity shadows.
+
+option.POINT_SHADOW_MAX_UPDATES=Max Updates
+option.POINT_SHADOW_MAX_UPDATES.comment=The maximum number of point-light shadow maps that can be updated per frame.
+
+option.POINT_SHADOW_THRESHOLD=Update Threshold
+option.POINT_SHADOW_THRESHOLD.comment=The minimum threshold in rank required for active lights to be replaced with a pending one. Lower values will cause more frequent updates.
+suffix.POINT_SHADOW_THRESHOLD=%
