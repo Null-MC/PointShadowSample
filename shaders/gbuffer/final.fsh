@@ -29,8 +29,6 @@ void main() {
         }
     #endif
 
-    //color = color / (1.0 + color);
-
     color = LinearToRgb(color);
     outColor = vec4(color, 1.0);
 }

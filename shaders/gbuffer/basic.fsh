@@ -46,7 +46,10 @@ void iris_emitFragment() {
     #if POINT_SHADOW_MAX_COUNT > 0
         if (isInPointShadowBounds) {
             vec3 localNormal = normalize(vIn.localNormal);
-            lightmap += shadowPoint_sampleAll(vIn.localPos, localNormal);
+            vec3 pointLighting = shadowPoint_sampleAll(vIn.localPos, localNormal);
+
+            // apply a simple tonemap to only point-lighting
+            lightmap += pointLighting / (1.0 + pointLighting);
         }
     #endif
 
