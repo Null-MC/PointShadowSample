@@ -6,7 +6,6 @@ in CustomVertexData {
     vec2 uv;
     vec3 localPos;
     vec3 localNormal;
-    //vec3 viewNormal;
 
     #ifdef RENDER_TERRAIN
         flat uint blockId;

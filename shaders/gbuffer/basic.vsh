@@ -6,7 +6,6 @@ out CustomVertexData {
     vec2 uv;
     vec3 localPos;
     vec3 localNormal;
-    //vec3 viewNormal;
 
     #ifdef RENDER_TERRAIN
         flat uint blockId;
@@ -25,7 +24,6 @@ void iris_sendParameters(VertexData data) {
     vOut.uv = data.uv;
     vOut.localPos = data.modelPos.xyz;
     vOut.localNormal = data.normal;
-    //vOut.viewNormal = iris_normalMatrix * data.normal;
     vOut.light = data.light;
 
     #ifdef RENDER_ENTITIES
