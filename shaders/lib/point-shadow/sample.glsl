@@ -27,10 +27,28 @@ vec3 shadowPoint_sampleAll(const in vec3 localPos, const in vec3 localNormal) {
     // initialize accumulated lighting to zero
     vec3 accumLighting = vec3(0.0);
 
-    for (uint i = 0u; i < POINT_SHADOW_MAX_COUNT; i++) {
+    #ifdef POINT_SHADOW_BIN_ENABLED
+        vec3 lightBinPos = lightList_getBinPos(0.02 * localNormal + localPos);
+        int lightBinIndex = lightList_getBinIndex(ivec3(lightBinPos));
+
+        uint maxLightCount = LightBinMap[lightBinIndex].lightCount;
+    #else
+        const uint maxLightCount = POINT_SHADOW_MAX_COUNT;
+    #endif
+
+    for (uint i = 0u; i < maxLightCount; i++) {
+        #ifdef POINT_SHADOW_BIN_ENABLED
+            uint lightIndex = LightBinMap[lightBinIndex].lightList[i];
+        #else
+            uint lightIndex = i;
+        #endif
+
         // get the point-light data and skip if block is undefined
-        ap_PointLight light = iris_getPointLight(i);
-        if (light.block == -1) continue;
+        ap_PointLight light = iris_getPointLight(lightIndex);
+
+        #ifndef POINT_SHADOW_BIN_ENABLED
+            if (light.block == -1) continue;
+        #endif
 
         // get the range of the light from block metadata lookup
         float lightRange = iris_getEmission(light.block);
@@ -48,7 +66,7 @@ vec3 shadowPoint_sampleAll(const in vec3 localPos, const in vec3 localNormal) {
 
         // apply shadowing from sample normal and shadow map
         float NoLm = max(dot(localNormal, sampleDir), 0.0);
-        float lightShadow = shadowPoint_sampleShadow(-sampleDir, sampleDist - offsetBias, i);
+        float lightShadow = shadowPoint_sampleShadow(-sampleDir, sampleDist - offsetBias, lightIndex);
         lightShadow *= NoLm * getLightAttenuation(sampleDist, lightRange);
 
         // accumulate lighting additively

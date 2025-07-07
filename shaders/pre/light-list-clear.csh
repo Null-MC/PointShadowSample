@@ -12,9 +12,15 @@ void main() {
     ivec3 binPos = ivec3(gl_GlobalInvocationID);
 
     if (all(lessThan(binPos, ivec3(LightBinGridSize)))) {
-        int binIndex = GetLightBinIndex(binPos);
+        int binIndex = lightList_getBinIndex(binPos);
 
         // reset bin count to zero
         LightBinMap[binIndex].lightCount = 0u;
     }
+
+    #ifdef POINT_SHADOW_DEBUG
+        if (binPos == ivec3(0)) {
+            Scene_LightCount = 0u;
+        }
+    #endif
 }

@@ -23,6 +23,8 @@ function applyRealTimeSettings() {
 }
 
 export function setupShader(dimension : NamespacedId) {
+    applyRealTimeSettings();
+
     // Custom Light Colors
     setLightColorEx('#362b21', 'brown_mushroom');
     setLightColorEx('#f39849', 'campfire');
@@ -89,6 +91,8 @@ export function setupShader(dimension : NamespacedId) {
 
         if (lightListEnabled) {
             defineGlobally('POINT_SHADOW_BIN_ENABLED', 1);
+            defineGlobally('POINT_SHADOW_BIN_REGION', pointShadow_regionSize);
+            defineGlobally('POINT_SHADOW_BIN_SIZE', pointShadow_binSize);
 
             lightListBinCount = getIntSetting('POINT_SHADOW_BIN_COUNT');
             defineGlobally('POINT_SHADOW_BIN_COUNT', lightListBinCount);
@@ -174,18 +178,17 @@ export function setupShader(dimension : NamespacedId) {
         .target(0, texFinal)
         .define('RENDER_ENTITIES', '1');
 
+    const finalPass = new CombinationPass('post/final.fsh');
+
     if (lightListEnabled) {
         terrainShader.ssbo(0, lightListBuffer);
         entitiesShader.ssbo(0, lightListBuffer);
+        finalPass.ssbo(0, lightListBuffer);
     }
 
     registerShader(terrainShader.build());
     registerShader(entitiesShader.build());
-
-    setCombinationPass(new CombinationPass('post/final.fsh')
-        .build());
-
-    applyRealTimeSettings();
+    setCombinationPass(finalPass.build());
 }
 
 export function onSettingsChanged(state : WorldState) {

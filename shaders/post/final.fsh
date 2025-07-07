@@ -8,6 +8,10 @@ uniform sampler2D texFinal;
 
 #include "/lib/utility/text.glsl"
 
+#ifdef POINT_SHADOW_BIN_ENABLED
+    #include "/lib/light-list/buffer.glsl"
+#endif
+
 
 void main() {
     ivec2 iuv = ivec2(gl_FragCoord.xy);
@@ -19,9 +23,15 @@ void main() {
             text.bgCol = vec4(0.0, 0.0, 0.0, 0.6);
             text.fgCol = vec4(1.0, 1.0, 1.0, 1.0);
 
-            printString((_P, _o, _i, _n, _t, _space, _L, _i, _g, _h, _t, _s, _colon, _space));
+            printString((_A, _c, _t, _i, _v, _e, _space, _L, _i, _g, _h, _t, _s, _colon, _space));
             printUnsignedInt(ap.point.total);
             printLine();
+
+            #ifdef POINT_SHADOW_BIN_ENABLED
+                printString((_B, _i, _n, _space, _L, _i, _g, _h, _t, _s, _colon, _space));
+                printUnsignedInt(Scene_LightCount);
+                printLine();
+            #endif
 
             endText(color);
         }
