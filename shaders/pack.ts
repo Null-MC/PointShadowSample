@@ -124,7 +124,7 @@ export function setupShader(dimension : NamespacedId) {
     if (lightListEnabled && pointShadowSettings.maxCount > 0) {
         // clear light lists
         const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
-        const binGroupCount = Math.ceil(binsPerAxis / 8);
+        const binGroupCount = Math.ceil(binsPerAxis / 4);
 
         print(`light list clear bounds: [${binGroupCount}]^3`);
 
@@ -135,7 +135,7 @@ export function setupShader(dimension : NamespacedId) {
             .build());
 
         // populate local light bins from global light list
-        const pointGroupCount = Math.ceil(pointShadowSettings.maxCount / (8*8*8));
+        const pointGroupCount = Math.ceil(pointShadowSettings.maxCount / (4*4*4));
 
         registerShader(Stage.PRE_RENDER, new Compute('light-list')
             .location('pre/light-list.csh')
