@@ -6,7 +6,7 @@ in CustomVertexData {
     vec2 uv;
     vec3 localPos;
     vec3 localNormal;
-    vec3 viewNormal;
+    //vec3 viewNormal;
 
     #ifdef RENDER_TERRAIN
         flat uint blockId;
@@ -45,13 +45,12 @@ void iris_emitFragment() {
         if (isInPointShadowBounds) lmcoord.x = (0.5/16.0);
     #endif
 
-    vec3 lightmap = iris_sampleLightmap(lmcoord).rgb;
-
-    // Basic directional lighting
-    // TODO: needs to be moved to lmcoord.y
-    vec3 viewNormal = normalize(vIn.viewNormal);
+    // Basic directional sky lighting
+    vec3 viewNormal = normalize(mat3(ap.camera.view) * vIn.localNormal);
     vec3 skyLightViewDir = normalize(ap.celestial.pos);
-    lightmap *= max(0.2, dot(viewNormal, skyLightViewDir) * 0.5 + 0.5);
+    lmcoord.y *= max(0.2, dot(viewNormal, skyLightViewDir) * 0.5 + 0.5);
+
+    vec3 lightmap = iris_sampleLightmap(lmcoord).rgb;
 
     #ifdef POINT_SHADOW_ENABLED
         if (isInPointShadowBounds) {
