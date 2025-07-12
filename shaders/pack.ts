@@ -9,17 +9,17 @@ export function initShader(dimension : NamespacedId) {
     worldSettings.ambientOcclusionLevel = 1.0;
     worldSettings.mergedHandDepth = true;
 
-    pointShadowSettings.nearPlane = 0.1;
-    pointShadowSettings.farPlane = 16.0;
-    pointShadowSettings.maxCount = getIntSetting('POINT_SHADOW_MAX_COUNT');
-    pointShadowSettings.resolution = getIntSetting('POINT_SHADOW_RESOLUTION');
-    pointShadowSettings.cacheRealTimeTerrain = true;
+    worldSettings.pointLight.nearPlane = 0.1;
+    worldSettings.pointLight.farPlane = 16.0;
+    worldSettings.pointLight.maxCount = getIntSetting('POINT_SHADOW_MAX_COUNT');
+    worldSettings.pointLight.resolution = getIntSetting('POINT_SHADOW_RESOLUTION');
+    worldSettings.pointLight.cacheRealTimeTerrain = true;
 }
 
 function applyRealTimeSettings() {
-    pointShadowSettings.realTimeCount = getIntSetting('POINT_SHADOW_REALTIME_COUNT');
-    pointShadowSettings.maxUpdates = getIntSetting('POINT_SHADOW_MAX_UPDATES');
-    pointShadowSettings.updateThreshold = getIntSetting('POINT_SHADOW_THRESHOLD') * 0.01;
+    worldSettings.pointLight.realTimeCount = getIntSetting('POINT_SHADOW_REALTIME_COUNT');
+    worldSettings.pointLight.maxUpdates = getIntSetting('POINT_SHADOW_MAX_UPDATES');
+    worldSettings.pointLight.updateThreshold = getIntSetting('POINT_SHADOW_THRESHOLD') * 0.01;
 }
 
 export function setupShader(dimension : NamespacedId) {
@@ -80,9 +80,9 @@ export function setupShader(dimension : NamespacedId) {
     // Define Global Settings
     let lightListEnabled = false;
     let lightListBinCount = 0;
-    if (pointShadowSettings.maxCount > 0) {
+    if (worldSettings.pointLight.maxCount > 0) {
         defineGlobally('POINT_SHADOW_ENABLED', 1);
-        defineGlobally('POINT_SHADOW_MAX_COUNT', pointShadowSettings.maxCount);
+        defineGlobally('POINT_SHADOW_MAX_COUNT', worldSettings.pointLight.maxCount);
 
         if (getBoolSetting('POINT_SHADOW_DEBUG'))
             defineGlobally('POINT_SHADOW_DEBUG', 1);
@@ -121,7 +121,7 @@ export function setupShader(dimension : NamespacedId) {
     }
 
     // Build Shader Pipeline
-    if (lightListEnabled && pointShadowSettings.maxCount > 0) {
+    if (lightListEnabled && worldSettings.pointLight.maxCount > 0) {
         // clear light lists
         const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
         const binGroupCount = Math.ceil(binsPerAxis / 4);
@@ -135,7 +135,7 @@ export function setupShader(dimension : NamespacedId) {
             .build());
 
         // populate local light bins from global light list
-        const pointGroupCount = Math.ceil(pointShadowSettings.maxCount / (4*4*4));
+        const pointGroupCount = Math.ceil(worldSettings.pointLight.maxCount / (4*4*4));
 
         registerShader(Stage.PRE_RENDER, new Compute('light-list')
             .location('pre/light-list.csh')
@@ -153,7 +153,7 @@ export function setupShader(dimension : NamespacedId) {
             .build());
     }
 
-    if (pointShadowSettings.maxCount > 0) {
+    if (worldSettings.pointLight.maxCount > 0) {
         registerShader(new ObjectShader('point-shadow', Usage.POINT)
             .vertex('gbuffer/shadow-point.vsh')
             .fragment('gbuffer/shadow-point.fsh')

@@ -18,30 +18,28 @@ declare var screenHeight: number;
  * The world settings. These control fixed rendering parameters of the pipeline.
  */
 declare class WorldSettings {
-    /**
-     * Default: 1024
-     */
-  shadowMapResolution: number;
-  cascadeCount: number;
-  cascadeSafeZones: number[];
-  shadowMapDistance: number;
-  shadowNearPlane: number;
-  shadowFarPlane: number;
   sunPathRotation: number;
   ambientOcclusionLevel: number;
-  renderSun: boolean;
-  renderWaterOverlay: boolean;
   mergedHandDepth: boolean;
-  renderMoon: boolean;
-  renderStars: boolean;
-  renderEntityShadow: boolean;
   disableShade: boolean;
+
+  shadow : ShadowSettings;
+  pointLight: PointShadowSettings;
+  render : RenderSettings;
 }
 
-/**
- * For details, read {@link WorldSettings}.
- */
-declare var worldSettings: WorldSettings;
+declare class ShadowSettings {
+    resolution : number;
+    cascades : number;
+    entityCascadeCount : number;
+    distance : number;
+    near : number;
+    far : number;
+
+    safeZone : number[];
+
+    enable() : void;
+}
 
 /**
  * The settings for point-light shadows.
@@ -75,10 +73,21 @@ declare class PointShadowSettings {
     farPlane: number;
 }
 
+declare class RenderSettings {
+    sun : boolean;
+    moon : boolean;
+    stars : boolean;
+    horizon : boolean;
+    clouds : boolean;
+    vignette : boolean;
+    waterOverlay : boolean;
+    entityShadow : boolean;
+}
+
 /**
- * For details, read {@link PointShadowSettings}.
+ * For details, read {@link WorldSettings}.
  */
-declare var pointShadowSettings: PointShadowSettings;
+declare var worldSettings: WorldSettings;
 
 // Formats/stages/usages
 
@@ -309,7 +318,6 @@ declare class TextureCopy {
   build(): PostPass;
 }
 
-declare function enableShadows(resolution : number, cascadeCount: number): void;
 
 /**
  * A memory barrier, to be registered with {@link registerBarrier}.
@@ -396,9 +404,9 @@ declare class Compute implements Shader<Compute> {
 
   location(loc: string): Compute;
   workGroups(x: number, y: number, z: number): Compute;
-  ssbo(index: number, buf: BuiltBuffer | undefined): Composite;
-  ubo(index: number, buf: BuiltBuffer | undefined): Composite;
-  define(key: string, value: string): Composite;
+  ssbo(index: number, buf: BuiltBuffer | undefined): Compute;
+  ubo(index: number, buf: BuiltBuffer | undefined): Compute;
+  define(key: string, value: string): Compute;
 
   build(): PostPass;
 }
@@ -432,7 +440,7 @@ interface BuiltBuffer {}
 /**
  * The result of a {@link StreamingBuffer}.
  */
-class BuiltStreamingBuffer implements BuiltBuffer {
+declare class BuiltStreamingBuffer implements BuiltBuffer {
     setInt(offset : number, value: number): void;
     setFloat(offset : number, value: number): void;
     setBool(offset : number, value: boolean): void;
@@ -730,6 +738,13 @@ declare class ArrayTexture {
  */
 declare class PNGTexture implements BuiltTexture {
   constructor(name: string, loc: string, blur: boolean, clamp: boolean);
+
+    readBack(): ArrayBuffer;
+    name(): string;
+    imageName(): string;
+    width(): number;
+    height(): number;
+    depth(): number;
 }
 
 // The auto-generated stuff goes here
@@ -875,6 +890,6 @@ declare namespace Usage {
 }
 
 
-declare class GenerateMips extends PostPass {
+declare class GenerateMips implements PostPass {
     constructor(texture: BuiltTexture);
 }
