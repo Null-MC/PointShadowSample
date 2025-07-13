@@ -9,16 +9,11 @@ float getLightAttenuation(const in float lightDist, const in float lightRange) {
 
 // returns a hardware-filtered point-light shadow map sample
 float shadowPoint_sampleShadow(const in vec3 sampleDir, const in float sampleDist, const in uint lightIndex) {
-    #ifdef DISTANCE_AS_DEPTH
-        // convert sample distance to normalized depth value
-        float sampleDepth = (sampleDist - ap.point.nearPlane) / (ap.point.farPlane - ap.point.nearPlane);
-    #else
-        float ndcDepth = (ap.point.farPlane + ap.point.nearPlane - 2.0 * ap.point.nearPlane * ap.point.farPlane / sampleDist) / (ap.point.farPlane - ap.point.nearPlane);
-        float sampleDepth = ndcDepth * 0.5 + 0.5;
-    #endif
+    // normalize depth to NDC space [-1 to +1]
+    float ndc_depth = (ap.point.farPlane + ap.point.nearPlane - 2.0 * ap.point.nearPlane * ap.point.farPlane / sampleDist) / (ap.point.farPlane - ap.point.nearPlane);
 
     // sample the cubemap with hardware-filtering enabled
-    return texture(pointLightFiltered, vec4(sampleDir, lightIndex), sampleDepth).r;
+    return texture(pointLightFiltered, vec4(sampleDir, lightIndex), ndc_depth * 0.5 + 0.5).r;
 }
 
 vec3 shadowPoint_sampleAll(const in vec3 localPos, const in vec3 localNormal) {
@@ -54,6 +49,7 @@ vec3 shadowPoint_sampleAll(const in vec3 localPos, const in vec3 localNormal) {
         ap_PointLight light = iris_getPointLight(lightIndex);
 
         #ifndef POINT_SHADOW_BIN_ENABLED
+            // skip empty light indices; already
             if (light.block == -1) continue;
         #endif
 
@@ -61,24 +57,22 @@ vec3 shadowPoint_sampleAll(const in vec3 localPos, const in vec3 localNormal) {
         float lightRange = iris_getEmission(light.block);
 
         vec3 fragToLight = light.pos - localSamplePos;
-        float sampleDist = length(fragToLight);
-        vec3 sampleDir = fragToLight / sampleDist;
 
-        #ifndef DISTANCE_AS_DEPTH
-            sampleDist = maxOf(abs(fragToLight));
-        #endif
+        // light depth is compared to longest depth along any axis
+        float sampleDist = maxOf(abs(fragToLight));
 
         // skip if out-of-range for current sample
         if (sampleDist >= lightRange) continue;
-        sampleDist -= offsetBias;
 
         // get the color of the light from block metadata lookup
         vec3 lightColor = iris_getLightColor(light.block).rgb;
         lightColor = RgbToLinear(lightColor);
 
+        vec3 sampleDir = normalize(fragToLight);
+
         // apply shadowing from sample normal and shadow map
         float NoLm = max(dot(localNormal, sampleDir), 0.0);
-        float lightShadow = shadowPoint_sampleShadow(-sampleDir, sampleDist, lightIndex);
+        float lightShadow = shadowPoint_sampleShadow(-sampleDir, sampleDist - offsetBias, lightIndex);
         lightShadow *= NoLm * getLightAttenuation(sampleDist, lightRange);
 
         // accumulate lighting additively

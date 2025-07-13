@@ -92,9 +92,6 @@ export function configurePipeline(pipeline : PipelineConfig) {
         defineGlobally('POINT_SHADOW_ENABLED', 1);
         defineGlobally('POINT_SHADOW_MAX_COUNT', renderConfig.pointLight.maxCount);
 
-        if (getBoolSetting('DISTANCE_AS_DEPTH'))
-            defineGlobally('DISTANCE_AS_DEPTH', 1);
-
         if (getBoolSetting('POINT_SHADOW_DEBUG'))
             defineGlobally('POINT_SHADOW_DEBUG', 1);
 
