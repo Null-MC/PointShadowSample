@@ -130,30 +130,28 @@ export function configurePipeline(pipeline : PipelineConfig) {
 
     // Build Shader Pipeline
     if (lightListEnabled && renderConfig.pointLight.maxCount > 0) {
-        // clear light lists
         const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
         const binGroupCount = Math.ceil(binsPerAxis / 4);
 
-        print(`light list clear bounds: [${binGroupCount}]^3`);
-
+        // reset all light bin counters to zero
         pipeline.registerPostPass(Stage.PRE_RENDER, new Compute('light-list-clear')
             .location('pre/light-list-clear.csh')
             .workGroups(binGroupCount, binGroupCount, binGroupCount)
             .ssbo(0, lightListBuffer)
             .build());
 
-        // populate local light bins from global light list
         const pointGroupCount = Math.ceil(renderConfig.pointLight.maxCount / (4*4*4));
 
+        // populate local light bins from global light list
         pipeline.registerPostPass(Stage.PRE_RENDER, new Compute('light-list')
             .location('pre/light-list.csh')
             .workGroups(pointGroupCount, pointGroupCount, pointGroupCount)
             .ssbo(0, lightListBuffer)
             .build());
 
-        // populate neighboring local light bins with current bins data
         pipeline.addBarrier(Stage.PRE_RENDER, SSBO_BIT);
 
+        // populate neighboring local light bins with current bins data
         pipeline.registerPostPass(Stage.PRE_RENDER, new Compute('light-list-neighbors')
             .location('pre/light-list-neighbors.csh')
             .workGroups(binGroupCount, binGroupCount, binGroupCount)
@@ -162,6 +160,7 @@ export function configurePipeline(pipeline : PipelineConfig) {
     }
 
     if (renderConfig.pointLight.maxCount > 0) {
+        // depth rendering pass for point-light shadows
         pipeline.registerObjectShader(new ObjectShader('point-shadow', Usage.POINT)
             .vertex('gbuffer/shadow-point.vsh')
             .fragment('gbuffer/shadow-point.fsh')
