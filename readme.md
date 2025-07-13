@@ -17,9 +17,9 @@ A limited number of "real-time" lights can be enabled via `RendererConfig.pointL
 - `RendererConfig.pointLight.farPlane`: The far-plane for point-light depth maps. Set to `16` for vanilla lighting, but you may want to increase for more realistic usages.
 
 
-# License/Usage
-### You may:
+## License/Usage
+#### You may:
 - use any and all code in this example for your own projects; including for-profit works.
 
-### You may NOT:
+#### You may NOT:
 - directly redistribute this example as your own work.
