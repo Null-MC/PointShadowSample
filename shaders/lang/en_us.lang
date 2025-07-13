@@ -21,4 +21,7 @@ option.POINT_SHADOW_BIN_ENABLED.comment=Enables creation of smaller localized li
 option.POINT_SHADOW_BIN_COUNT=Bin Max Count
 option.POINT_SHADOW_BIN_COUNT.comment=The maximum number of lights each local bin can hold.
 
+option.DISTANCE_AS_DEPTH=Distance as Depth
+option.DISTANCE_AS_DEPTH.comment=Writes/samples point-light shadow map depth as radial distance rather than planar axis depth.
+
 option.POINT_SHADOW_DEBUG=Show Active Count

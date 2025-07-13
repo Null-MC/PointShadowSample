@@ -6,7 +6,9 @@ in CustomVertexData {
     vec2 uv;
 } vIn;
 
-out float gl_FragDepth;
+#ifdef DISTANCE_AS_DEPTH
+    out float gl_FragDepth;
+#endif
 
 #include "/lib/common.glsl"
 
@@ -17,12 +19,13 @@ void iris_emitFragment() {
     vec2 mUV = vIn.uv;
     iris_modifyBase(mUV, mColor, mLight);
 
-    float LOD = textureQueryLod(irisInt_BaseTex, mUV).y;
+    #ifdef DISTANCE_AS_DEPTH
+        float finalDist = length(vIn.modelPos);
+        gl_FragDepth = (finalDist - ap.point.nearPlane) / (ap.point.farPlane - ap.point.nearPlane);
+    #endif
 
-    float finalDist = length(vIn.modelPos);
-    gl_FragDepth = (finalDist - ap.point.nearPlane) / (ap.point.farPlane - ap.point.nearPlane);
-
-    float alpha = iris_sampleBaseTexLod(mUV, LOD).a;
+    //float LOD = textureQueryLod(irisInt_BaseTex, mUV).y;
+    float alpha = iris_sampleBaseTex(mUV).a;
 
     float near = vIn.isFull ? 0.5 : 0.49999;
     if (clamp(vIn.modelPos, -near, near) == vIn.modelPos) alpha = 0.0;

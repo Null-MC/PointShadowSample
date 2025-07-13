@@ -9,8 +9,13 @@ float getLightAttenuation(const in float lightDist, const in float lightRange) {
 
 // returns a hardware-filtered point-light shadow map sample
 float shadowPoint_sampleShadow(const in vec3 sampleDir, const in float sampleDist, const in uint lightIndex) {
-    // convert sample distance to normalized depth value
-    float sampleDepth = (sampleDist - ap.point.nearPlane) / (ap.point.farPlane - ap.point.nearPlane);
+    #ifdef DISTANCE_AS_DEPTH
+        // convert sample distance to normalized depth value
+        float sampleDepth = (sampleDist - ap.point.nearPlane) / (ap.point.farPlane - ap.point.nearPlane);
+    #else
+        float ndcDepth = (ap.point.farPlane + ap.point.nearPlane - 2.0 * ap.point.nearPlane * ap.point.farPlane / sampleDist) / (ap.point.farPlane - ap.point.nearPlane);
+        float sampleDepth = ndcDepth * 0.5 + 0.5;
+    #endif
 
     // sample the cubemap with hardware-filtering enabled
     return texture(pointLightFiltered, vec4(sampleDir, lightIndex), sampleDepth).r;
@@ -59,8 +64,13 @@ vec3 shadowPoint_sampleAll(const in vec3 localPos, const in vec3 localNormal) {
         float sampleDist = length(fragToLight);
         vec3 sampleDir = fragToLight / sampleDist;
 
+        #ifndef DISTANCE_AS_DEPTH
+            sampleDist = maxOf(abs(fragToLight));
+        #endif
+
         // skip if out-of-range for current sample
         if (sampleDist >= lightRange) continue;
+        sampleDist -= offsetBias;
 
         // get the color of the light from block metadata lookup
         vec3 lightColor = iris_getLightColor(light.block).rgb;
@@ -68,7 +78,7 @@ vec3 shadowPoint_sampleAll(const in vec3 localPos, const in vec3 localNormal) {
 
         // apply shadowing from sample normal and shadow map
         float NoLm = max(dot(localNormal, sampleDir), 0.0);
-        float lightShadow = shadowPoint_sampleShadow(-sampleDir, sampleDist - offsetBias, lightIndex);
+        float lightShadow = shadowPoint_sampleShadow(-sampleDir, sampleDist, lightIndex);
         lightShadow *= NoLm * getLightAttenuation(sampleDist, lightRange);
 
         // accumulate lighting additively

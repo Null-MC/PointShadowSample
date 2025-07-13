@@ -38,19 +38,22 @@ void iris_emitFragment() {
     // Alpha test.
     if (iris_discardFragment(color)) {discard; return;}
 
+    // normalize lightmap coordinate to 0-1
     vec2 lmcoord = LightMapNorm(vIn.light);
 
     #ifdef POINT_SHADOW_ENABLED
         bool isInPointShadowBounds = pointShadow_isInBounds(vIn.localPos);
 
+        // remove lightmap block lighting when within point-light shadow bounds
         if (isInPointShadowBounds) lmcoord.x = 0.0;
     #endif
 
-    // Basic directional sky lighting
+    // Add basic directional sky lighting
     vec3 viewNormal = normalize(mat3(ap.camera.view) * vIn.localNormal);
     vec3 skyLightViewDir = normalize(ap.celestial.pos);
     lmcoord.y *= max(0.2, dot(viewNormal, skyLightViewDir) * 0.5 + 0.5);
 
+    // scale lightmap coord back to sampling range
     lmcoord = LightMapTex(vIn.light);
     vec3 lightmap = iris_sampleLightmap(lmcoord).rgb;
 
@@ -58,6 +61,9 @@ void iris_emitFragment() {
         if (isInPointShadowBounds) {
             vec3 localNormal = normalize(vIn.localNormal);
             vec3 pointLighting = shadowPoint_sampleAll(vIn.localPos, localNormal);
+
+            // apply a boost to make block lighting more visible
+            pointLighting *= PointLightBrightness;
 
             #ifdef RENDER_TERRAIN
                 // for terrain only, apply self-emission to replace lightmap block light

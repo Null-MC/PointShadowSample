@@ -12,6 +12,7 @@ export function setupOptions() {
         .add(asBool('POINT_SHADOW_BIN_ENABLED', false, true))
         .add(asIntRange('POINT_SHADOW_BIN_COUNT', 32, 2, 64, 2, true))
         .add(EMPTY)
+        .add(asBool('DISTANCE_AS_DEPTH', true, true))
         .add(asBool('POINT_SHADOW_DEBUG', false, true))
         .build();
 }

@@ -8,5 +8,5 @@ vec2 LightMapNorm(vec2 lightCoord) {
 }
 
 vec2 LightMapTex(vec2 lightNorm) {
-    return fma(clamp(lightNorm, 0.0, 1.0), vec2(lmCoordRange), vec2(lmCoordMin));
+    return saturate(lightNorm) * lmCoordRange + lmCoordMin;
 }

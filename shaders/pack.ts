@@ -9,10 +9,14 @@ export function configureRenderer(renderer : RendererConfig) {
     renderer.ambientOcclusionLevel = 1.0;
     renderer.mergedHandDepth = true;
 
+    // all point lights have 0.1m radius, and max of 16m falloff
     renderer.pointLight.nearPlane = 0.1;
     renderer.pointLight.farPlane = 16.0;
+
     renderer.pointLight.maxCount = getIntSetting('POINT_SHADOW_MAX_COUNT');
     renderer.pointLight.resolution = getIntSetting('POINT_SHADOW_RESOLUTION');
+
+    // enabling this option caches terrain rendering, and only does realtime updates for entities
     renderer.pointLight.cacheRealTimeTerrain = true;
 
     applyRealTimeSettings(renderer);
@@ -82,9 +86,14 @@ export function configurePipeline(pipeline : PipelineConfig) {
     // Define Global Settings
     let lightListEnabled = false;
     let lightListBinCount = 0;
+
+    // only define settings when point light shadows are enabled
     if (renderConfig.pointLight.maxCount > 0) {
         defineGlobally('POINT_SHADOW_ENABLED', 1);
         defineGlobally('POINT_SHADOW_MAX_COUNT', renderConfig.pointLight.maxCount);
+
+        if (getBoolSetting('DISTANCE_AS_DEPTH'))
+            defineGlobally('DISTANCE_AS_DEPTH', 1);
 
         if (getBoolSetting('POINT_SHADOW_DEBUG'))
             defineGlobally('POINT_SHADOW_DEBUG', 1);
