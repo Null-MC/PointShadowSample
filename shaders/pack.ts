@@ -15,7 +15,10 @@ export function configureRenderer(renderer : RendererConfig) {
     renderer.pointLight.resolution = getIntSetting('POINT_SHADOW_RESOLUTION');
     renderer.pointLight.cacheRealTimeTerrain = true;
 
-    // real-time settings
+    applyRealTimeSettings(renderer);
+}
+
+function applyRealTimeSettings(renderer: RendererConfig) {
     renderer.pointLight.realTimeCount = getIntSetting('POINT_SHADOW_REALTIME_COUNT');
     renderer.pointLight.maxUpdates = getIntSetting('POINT_SHADOW_MAX_UPDATES');
     renderer.pointLight.updateThreshold = getIntSetting('POINT_SHADOW_THRESHOLD') * 0.01;
@@ -190,6 +193,10 @@ export function configurePipeline(pipeline : PipelineConfig) {
     pipeline.setCombinationPass(finalPass.build());
 }
 
+// export function onSettingsChanged(pipeline : PipelineConfig) {
+//     const config = pipeline.getRendererConfig();
+//     applyRealTimeSettings(config);
+// }
 
 // HELPERS
 
