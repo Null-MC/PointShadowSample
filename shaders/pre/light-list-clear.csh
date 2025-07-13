@@ -20,6 +20,7 @@ void main() {
 
     #ifdef POINT_SHADOW_DEBUG
         if (binPos == ivec3(0)) {
+            // reset bin debug counter to zero
             Scene_LightCount = 0u;
         }
     #endif

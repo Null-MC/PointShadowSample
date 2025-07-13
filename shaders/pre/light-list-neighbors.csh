@@ -23,9 +23,6 @@ void main() {
 		float lightRange = iris_getEmission(light.block);
 		float lightRangeSq = lightRange*lightRange;
 
-		//uint voxelIndex = LightBinMap[lightBinIndex].lightList[i].voxelIndex;
-		//ivec3 lightVoxelPos = GetLightVoxelPos(voxelIndex);
-		// TODO: get voxelPos from light.pos
 		vec3 lightBinPos = lightList_getBinPos(light.pos);
 		ivec3 lightVoxelPos = ivec3(lightBinPos * POINT_SHADOW_BIN_SIZE);
 
@@ -57,5 +54,6 @@ void main() {
 		}
 
 		// TODO: redo this with a linear loop that skips center without continue
+		// TODO: needs a separate 'neighbor' counter to avoid adding a neighboring light multiple times!
 	}
 }
