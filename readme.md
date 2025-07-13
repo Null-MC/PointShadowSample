@@ -18,8 +18,8 @@ A limited number of "real-time" lights can be enabled via `RendererConfig.pointL
 
 
 ## License/Usage
-#### You may:
+### You may:
 - use any and all code in this example for your own projects; including for-profit works.
 
-#### You may NOT:
+### You may NOT:
 - directly redistribute this example as your own work.
