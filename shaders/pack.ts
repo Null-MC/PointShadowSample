@@ -4,27 +4,24 @@ const pointShadow_regionSize = 128;
 const pointShadow_binSize = 8;
 
 
-export function initShader(dimension : NamespacedId) {
-    worldSettings.disableShade = false;
-    worldSettings.ambientOcclusionLevel = 1.0;
-    worldSettings.mergedHandDepth = true;
+export function configureRenderer(renderer : RendererConfig) {
+    renderer.disableShade = false;
+    renderer.ambientOcclusionLevel = 1.0;
+    renderer.mergedHandDepth = true;
 
-    worldSettings.pointLight.nearPlane = 0.1;
-    worldSettings.pointLight.farPlane = 16.0;
-    worldSettings.pointLight.maxCount = getIntSetting('POINT_SHADOW_MAX_COUNT');
-    worldSettings.pointLight.resolution = getIntSetting('POINT_SHADOW_RESOLUTION');
-    worldSettings.pointLight.cacheRealTimeTerrain = true;
+    renderer.pointLight.nearPlane = 0.1;
+    renderer.pointLight.farPlane = 16.0;
+    renderer.pointLight.maxCount = getIntSetting('POINT_SHADOW_MAX_COUNT');
+    renderer.pointLight.resolution = getIntSetting('POINT_SHADOW_RESOLUTION');
+    renderer.pointLight.cacheRealTimeTerrain = true;
+
+    // real-time settings
+    renderer.pointLight.realTimeCount = getIntSetting('POINT_SHADOW_REALTIME_COUNT');
+    renderer.pointLight.maxUpdates = getIntSetting('POINT_SHADOW_MAX_UPDATES');
+    renderer.pointLight.updateThreshold = getIntSetting('POINT_SHADOW_THRESHOLD') * 0.01;
 }
 
-function applyRealTimeSettings() {
-    worldSettings.pointLight.realTimeCount = getIntSetting('POINT_SHADOW_REALTIME_COUNT');
-    worldSettings.pointLight.maxUpdates = getIntSetting('POINT_SHADOW_MAX_UPDATES');
-    worldSettings.pointLight.updateThreshold = getIntSetting('POINT_SHADOW_THRESHOLD') * 0.01;
-}
-
-export function setupShader(dimension : NamespacedId) {
-    applyRealTimeSettings();
-
+export function configurePipeline(pipeline : PipelineConfig) {
     // Custom Light Colors
     setLightColorEx('#362b21', 'brown_mushroom');
     setLightColorEx('#f39849', 'campfire');
@@ -77,12 +74,14 @@ export function setupShader(dimension : NamespacedId) {
         "brown_candle", "red_candle", "orange_candle", "yellow_candle", "lime_candle", "green_candle", "cyan_candle",
         "light_blue_candle", "blue_candle", "purple_candle", "magenta_candle", "pink_candle");
 
+    const renderConfig = pipeline.getRendererConfig();
+
     // Define Global Settings
     let lightListEnabled = false;
     let lightListBinCount = 0;
-    if (worldSettings.pointLight.maxCount > 0) {
+    if (renderConfig.pointLight.maxCount > 0) {
         defineGlobally('POINT_SHADOW_ENABLED', 1);
-        defineGlobally('POINT_SHADOW_MAX_COUNT', worldSettings.pointLight.maxCount);
+        defineGlobally('POINT_SHADOW_MAX_COUNT', renderConfig.pointLight.maxCount);
 
         if (getBoolSetting('POINT_SHADOW_DEBUG'))
             defineGlobally('POINT_SHADOW_DEBUG', 1);
@@ -121,46 +120,46 @@ export function setupShader(dimension : NamespacedId) {
     }
 
     // Build Shader Pipeline
-    if (lightListEnabled && worldSettings.pointLight.maxCount > 0) {
+    if (lightListEnabled && renderConfig.pointLight.maxCount > 0) {
         // clear light lists
         const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
         const binGroupCount = Math.ceil(binsPerAxis / 4);
 
         print(`light list clear bounds: [${binGroupCount}]^3`);
 
-        registerShader(Stage.PRE_RENDER, new Compute('light-list-clear')
+        pipeline.registerPostPass(Stage.PRE_RENDER, new Compute('light-list-clear')
             .location('pre/light-list-clear.csh')
             .workGroups(binGroupCount, binGroupCount, binGroupCount)
             .ssbo(0, lightListBuffer)
             .build());
 
         // populate local light bins from global light list
-        const pointGroupCount = Math.ceil(worldSettings.pointLight.maxCount / (4*4*4));
+        const pointGroupCount = Math.ceil(renderConfig.pointLight.maxCount / (4*4*4));
 
-        registerShader(Stage.PRE_RENDER, new Compute('light-list')
+        pipeline.registerPostPass(Stage.PRE_RENDER, new Compute('light-list')
             .location('pre/light-list.csh')
             .workGroups(pointGroupCount, pointGroupCount, pointGroupCount)
             .ssbo(0, lightListBuffer)
             .build());
 
         // populate neighboring local light bins with current bins data
-        registerBarrier(Stage.PRE_RENDER, new MemoryBarrier(SSBO_BIT));
+        pipeline.addBarrier(Stage.PRE_RENDER, SSBO_BIT);
 
-        registerShader(Stage.PRE_RENDER, new Compute('light-list-neighbors')
+        pipeline.registerPostPass(Stage.PRE_RENDER, new Compute('light-list-neighbors')
             .location('pre/light-list-neighbors.csh')
             .workGroups(binGroupCount, binGroupCount, binGroupCount)
             .ssbo(0, lightListBuffer)
             .build());
     }
 
-    if (worldSettings.pointLight.maxCount > 0) {
-        registerShader(new ObjectShader('point-shadow', Usage.POINT)
+    if (renderConfig.pointLight.maxCount > 0) {
+        pipeline.registerObjectShader(new ObjectShader('point-shadow', Usage.POINT)
             .vertex('gbuffer/shadow-point.vsh')
             .fragment('gbuffer/shadow-point.fsh')
             .build());
     }
 
-    registerShader(new ObjectShader('skybox', Usage.SKYBOX)
+    pipeline.registerObjectShader(new ObjectShader('skybox', Usage.SKYBOX)
         .vertex('gbuffer/skybox.vsh')
         .fragment('gbuffer/skybox.fsh')
         .target(0, texFinal)
@@ -186,13 +185,9 @@ export function setupShader(dimension : NamespacedId) {
         finalPass.ssbo(0, lightListBuffer);
     }
 
-    registerShader(terrainShader.build());
-    registerShader(entitiesShader.build());
-    setCombinationPass(finalPass.build());
-}
-
-export function onSettingsChanged(state : WorldState) {
-    applyRealTimeSettings();
+    pipeline.registerObjectShader(terrainShader.build());
+    pipeline.registerObjectShader(entitiesShader.build());
+    pipeline.setCombinationPass(finalPass.build());
 }
 
 

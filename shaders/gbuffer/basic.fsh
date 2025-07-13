@@ -18,6 +18,8 @@ uniform samplerCubeArrayShadow pointLightFiltered;
 
 #include "/lib/common.glsl"
 
+#include "/lib/utility/lmcoord.glsl"
+
 #ifdef POINT_SHADOW_ENABLED
     #ifdef POINT_SHADOW_BIN_ENABLED
         #include "/lib/light-list/buffer.glsl"
@@ -36,12 +38,12 @@ void iris_emitFragment() {
     // Alpha test.
     if (iris_discardFragment(color)) {discard; return;}
 
-    vec2 lmcoord = vIn.light;
+    vec2 lmcoord = LightMapNorm(vIn.light);
 
     #ifdef POINT_SHADOW_ENABLED
         bool isInPointShadowBounds = pointShadow_isInBounds(vIn.localPos);
 
-        if (isInPointShadowBounds) lmcoord.x = (0.5/16.0);
+        if (isInPointShadowBounds) lmcoord.x = 0.0;
     #endif
 
     // Basic directional sky lighting
@@ -49,6 +51,7 @@ void iris_emitFragment() {
     vec3 skyLightViewDir = normalize(ap.celestial.pos);
     lmcoord.y *= max(0.2, dot(viewNormal, skyLightViewDir) * 0.5 + 0.5);
 
+    lmcoord = LightMapTex(vIn.light);
     vec3 lightmap = iris_sampleLightmap(lmcoord).rgb;
 
     #ifdef POINT_SHADOW_ENABLED
