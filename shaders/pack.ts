@@ -108,7 +108,7 @@ export function configurePipeline(pipeline : PipelineConfig) {
     }
 
     // Create Textures & Buffers
-    const texFinal = new Texture('texFinal')
+    const texFinal = pipeline.createTexture('texFinal')
         .format(Format.RGBA16F)
         .width(screenWidth)
         .height(screenHeight)
@@ -123,69 +123,71 @@ export function configurePipeline(pipeline : PipelineConfig) {
         const bufferSize = binByteSize * cubed(binsPerAxis) + 4;
         print(`Light-List Buffer Size: ${bufferSize.toLocaleString()}`);
 
-        lightListBuffer = new GPUBuffer(bufferSize)
-            .clear(false)
-            .build();
+        lightListBuffer = pipeline.createBuffer(bufferSize, false);
     }
 
     // Build Shader Pipeline
-    if (lightListEnabled && renderConfig.pointLight.maxCount > 0) {
+    if (lightListEnabled) {
+        const preRenderQueue = pipeline.createCommandList();
+
         const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
         const binGroupCount = Math.ceil(binsPerAxis / 4);
 
         // reset all light bin counters to zero
-        pipeline.registerPostPass(Stage.PRE_RENDER, new Compute('light-list-clear')
+        preRenderQueue.createCompute('light-list-clear')
             .location('pre/light-list-clear.csh')
             .workGroups(binGroupCount, binGroupCount, binGroupCount)
             .ssbo(0, lightListBuffer)
-            .build());
+            .compile();
 
         const pointGroupCount = Math.ceil(renderConfig.pointLight.maxCount / (4*4*4));
 
         // populate local light bins from global light list
-        pipeline.registerPostPass(Stage.PRE_RENDER, new Compute('light-list')
+        preRenderQueue.createCompute('light-list')
             .location('pre/light-list.csh')
             .workGroups(pointGroupCount, pointGroupCount, pointGroupCount)
             .ssbo(0, lightListBuffer)
-            .build());
+            .compile();
 
-        pipeline.addBarrier(Stage.PRE_RENDER, SSBO_BIT);
+        preRenderQueue.barrier(SSBO_BIT);
 
         // populate neighboring local light bins with current bins data
-        pipeline.registerPostPass(Stage.PRE_RENDER, new Compute('light-list-neighbors')
+        preRenderQueue.createCompute('light-list-neighbors')
             .location('pre/light-list-neighbors.csh')
             .workGroups(binGroupCount, binGroupCount, binGroupCount)
             .ssbo(0, lightListBuffer)
-            .build());
+            .compile();
+
+        pipeline.setCommandList(Stage.PRE_RENDER, preRenderQueue.end());
     }
 
     if (renderConfig.pointLight.maxCount > 0) {
         // depth rendering pass for point-light shadows
-        pipeline.registerObjectShader(new ObjectShader('point-shadow', Usage.POINT)
+        pipeline.createObjectShader('point-shadow', Usage.POINT)
             .vertex('gbuffer/shadow-point.vsh')
             .fragment('gbuffer/shadow-point.fsh')
-            .build());
+            .compile();
     }
 
-    pipeline.registerObjectShader(new ObjectShader('skybox', Usage.SKYBOX)
+    pipeline.createObjectShader('skybox', Usage.SKYBOX)
         .vertex('gbuffer/skybox.vsh')
         .fragment('gbuffer/skybox.fsh')
         .target(0, texFinal)
-        .build());
+        .compile();
 
-    const terrainShader = new ObjectShader('terrain', Usage.TEXTURED)
+    const terrainShader = pipeline.createObjectShader('terrain', Usage.TEXTURED)
         .vertex('gbuffer/basic.vsh')
         .fragment('gbuffer/basic.fsh')
         .target(0, texFinal)
         .define('RENDER_TERRAIN', '1');
 
-    const entitiesShader = new ObjectShader('entities', Usage.ENTITY_SOLID)
+    const entitiesShader = pipeline.createObjectShader('entities', Usage.ENTITY_SOLID)
         .vertex('gbuffer/basic.vsh')
         .fragment('gbuffer/basic.fsh')
         .target(0, texFinal)
         .define('RENDER_ENTITIES', '1');
 
-    const finalPass = new CombinationPass('post/final.fsh');
+    const finalPass = pipeline.createCombinationPass('post/final.fsh');
 
     if (lightListEnabled) {
         terrainShader.ssbo(0, lightListBuffer);
@@ -193,9 +195,9 @@ export function configurePipeline(pipeline : PipelineConfig) {
         finalPass.ssbo(0, lightListBuffer);
     }
 
-    pipeline.registerObjectShader(terrainShader.build());
-    pipeline.registerObjectShader(entitiesShader.build());
-    pipeline.setCombinationPass(finalPass.build());
+    terrainShader.compile();
+    entitiesShader.compile();
+    finalPass.compile();
 }
 
 // export function onSettingsChanged(pipeline : PipelineConfig) {
