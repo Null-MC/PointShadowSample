@@ -128,7 +128,7 @@ export function configurePipeline(pipeline : PipelineConfig) {
 
     // Build Shader Pipeline
     if (lightListEnabled) {
-        const preRenderQueue = pipeline.createCommandList();
+        const preRenderQueue = pipeline.forStage(Stage.PRE_RENDER);
 
         const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
         const binGroupCount = Math.ceil(binsPerAxis / 4);
@@ -158,7 +158,7 @@ export function configurePipeline(pipeline : PipelineConfig) {
             .ssbo(0, lightListBuffer)
             .compile();
 
-        pipeline.setCommandList(Stage.PRE_RENDER, preRenderQueue.end());
+        preRenderQueue.end();
     }
 
     if (renderConfig.pointLight.maxCount > 0) {
