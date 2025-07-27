@@ -32,7 +32,8 @@ vec3 shadowPoint_sampleAll(const in vec3 localPos, const in vec3 localNormal) {
         int lightBinIndex = lightList_getBinIndex(ivec3(lightBinPos));
 
         // get the light count for the current local bin
-        uint maxLightCount = LightBinMap[lightBinIndex].lightCount;
+        uint maxLightCount = LightBinMap[lightBinIndex].lightCountFinal;
+        maxLightCount = clamp(maxLightCount, 0u, POINT_SHADOW_BIN_COUNT);
     #else
         // sample all lights in the global array
         const uint maxLightCount = POINT_SHADOW_MAX_COUNT;

@@ -19,6 +19,8 @@ export function configureRenderer(renderer : RendererConfig) {
     // enabling this option caches terrain rendering, and only does realtime updates for entities
     renderer.pointLight.cacheRealTimeTerrain = true;
 
+    renderer.shadow.enabled = false;
+
     applyRealTimeSettings(renderer);
 }
 
@@ -118,7 +120,7 @@ export function configurePipeline(pipeline : PipelineConfig) {
 
     let lightListBuffer: BuiltBuffer | null = null;
     if (lightListEnabled) {
-        const binByteSize = 4 * (1 + lightListBinCount * 2);
+        const binByteSize = 4 * (2 + lightListBinCount);
         const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
         const bufferSize = binByteSize * cubed(binsPerAxis) + 4;
         print(`Light-List Buffer Size: ${bufferSize.toLocaleString()}`);
