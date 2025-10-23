@@ -29,46 +29,93 @@ declare class RendererConfig {
   render : RenderSettings;
 }
 
+declare enum DrawMode {
+    TRIANGLE,
+    TRIANGLE_FAN,
+    QUAD,
+    POINT
+}
+
+declare class IndirectDraw implements Command {
+    vertex(loc: string): IndirectDraw;
+    geometry(loc: string): IndirectDraw;
+    control(loc: string): IndirectDraw;
+    eval(loc: string): IndirectDraw;
+    fragment(loc: string): IndirectDraw;
+
+    state(state: StateReference): IndirectDraw;
+
+    target(index: number, tex: BuiltTexture | undefined): IndirectDraw;
+    target(index: number, tex: BuiltTexture | undefined, mip: number): IndirectDraw;
+    ssbo(index: number, buf: BuiltBuffer | undefined): IndirectDraw;
+    ubo(index: number, buf: BuiltBuffer | undefined): IndirectDraw;
+    define(key: string, value: string): IndirectDraw;
+    depthTest(enable: boolean): IndirectDraw;
+
+    blendFunc(
+            index: number,
+            srcRGB: BlendModeFunction,
+            dstRGB: BlendModeFunction,
+            srcA: BlendModeFunction,
+            dstA: BlendModeFunction,
+    ): IndirectDraw;
+
+    compile(): PostPass;
+}
+
 declare class PointShadowSettings {
+    /**
+     * The resolution for point-light shadow maps.
+     */
     resolution : number;
-
+    /**
+     * The maximum number of point-light shadows that can exist per-frame.
+     */
     maxCount : number;
-
+    /**
+     * The maximum number of point-light shadow maps that can be updated per-frame.
+     */
     maxUpdates : number;
-
+    /**
+     * The number of nearest lights (to camera) that will include entities and be updated every frame.
+     */
     realTimeCount : number;
-
+    /**
+     * Allows caching of terrain rendering for realtime lights.
+     */
     cacheRealTimeTerrain : boolean;
-
+    /**
+     * The minimum threshold in ranking [0.0-1.0] that is required for a pending light to replace an existing light.
+     */
     updateThreshold : number;
-
     nearPlane : number;
-
     farPlane : number;
 }
 
 declare class ShadowSettings {
     resolution : number;
     cascades : number;
+    pssmLambda : number;
+    closestImportantDistance : number;
+    outerMarginBlocks : number;
+    outerMarginPixels : number;
     entityCascadeCount : number;
+    safeZone : number[];
     distance : number;
     near : number;
     far : number;
-
-    safeZone : number[];
-
     enabled : boolean;
 }
 
 declare class RenderSettings {
     sun : boolean;
-    moon : boolean;
-    stars : boolean;
     horizon : boolean;
     clouds : boolean;
+    moon : boolean;
     vignette : boolean;
     waterOverlay : boolean;
     entityShadow : boolean;
+    stars : boolean;
 }
 
 // Formats/stages/usages
@@ -198,6 +245,7 @@ declare function setLightColor(
  * @alpha
  */
 declare function setLightColor(name: NamespacedId, hex: number): void;
+declare function setBiomeInfo(name: NamespacedId, hex: number): void;
 
 // Uniforms
 
@@ -215,28 +263,10 @@ declare function defineGlobally(key: string, value: string | number): void;
 interface BuiltObjectShader {}
 interface PostPass {}
 
-/**
- * For {@link addBarrier}. Indicates all SSBO operations must be visible in the next pass.
- */
-declare var SSBO_BIT: number;
-
-/**
- * For {@link addBarrier}. Indicates all UBO operations must be visible in the next pass.
- */
-declare var UBO_BIT: number;
-
-/**
- * For {@link addBarrier}. Indicates all imageStore operations must be visible in the next pass.
- */
-declare var IMAGE_BIT: number;
-
-/**
- * For {@link addBarrier}. Indicates all texture fetch operations must reflect data set in past passes.
- */
-declare var FETCH_BIT: number;
 
 /**
  * For a memory barrier. Indicates a "texture barrier", a special operation in OpenGL.
+ * Not yet implemented in the Slang branch.
  */
 declare var GL_TEXTURE_BARRIER: number;
 
@@ -253,6 +283,18 @@ declare class Cubemap {
 
     mipmap(mipmap: boolean): Cubemap;
     build(): BuiltTexture;
+}
+
+declare class ExportList {
+  addBool(name : string, value : boolean) : ExportList;
+  addInt(name : string, value : number) : ExportList;
+  addFloat(name : string, value : number) : ExportList;
+
+  build() : BuiltExportList;
+}
+
+declare interface BuiltExportList {
+
 }
 
 declare class PipelineConfig {
@@ -279,6 +321,10 @@ declare class PipelineConfig {
     createCubemapTexture(name : string) : Cubemap;
     createImageCubemapTexture(sampler : string, image : string) : Cubemap;
 
+    setGlobalExport(list : BuiltExportList) : void;
+
+    createExportList() : ExportList;
+
     /**
      * Creates a reference to a texture that can change.
      * @param sampler The sampler name
@@ -294,8 +340,8 @@ declare class PipelineConfig {
 
     importRawTexture(name : string, location : string) : RawTexture;
 
-    createBuffer(size : number, clear : boolean) : BuiltBuffer;
-    createStreamingBuffer(size : number) : BuiltStreamingBuffer;
+    createBuffer(name : string, size : number, clear : boolean) : BuiltBuffer;
+    createStreamingBuffer(name : string, size : number) : BuiltStreamingBuffer;
 }
 
 declare class StateReference {
@@ -317,7 +363,7 @@ declare class CommandList {
 
     createCompute(name : string) : Compute;
 
-    barrier(barrier : number, state? : StateReference) : CommandList;
+    createIndirectDraw(name : string, buffer : BuiltGPUBuffer, mode : DrawMode, maxVertices : number) : IndirectDraw;
 
     generateMips(...tex : BuiltTexture[]) : CommandList;
 
@@ -334,7 +380,18 @@ declare interface BuiltCommandList {}
 interface Shader<T, X> {
     ssbo(index: number, buf: BuiltBuffer | undefined): T;
     ubo(index: number, buf: BuiltBuffer | undefined): T;
-    define(key: string, value: string): T;
+
+  exportBool(name : string, value : boolean) : T;
+  exportInt(name : string, value : number) : T;
+  exportFloat(name : string, value : number) : T;
+  exportList(list : BuiltExportList) : T;
+
+  /**
+   * A object override. This replaces any bindings to {@param reference} with {@param target}. For example, Sampler2D TextureOne getting replaced with Sampler2D targetTexture.
+   * @param reference The name to look for.
+   * @param target The object to replace with.
+   */
+    overrideObject(reference:string, target:string): T;
 
     compile(): X;
 }
@@ -346,11 +403,14 @@ interface PostShader<T> extends Shader<T, PostPass> {
 declare class ObjectShader implements Shader<ObjectShader, BuiltObjectShader> {
   private constructor(name: string, usage: ProgramUsage);
 
-  vertex(loc: string): ObjectShader;
-  geometry(loc: string): ObjectShader;
-  control(loc: string): ObjectShader;
-  eval(loc: string): ObjectShader;
-  fragment(loc: string): ObjectShader;
+  location(loc: string): ObjectShader;
+
+  vertex(entrypoint: string): ObjectShader;
+  geometry(entrypoint: string): ObjectShader;
+  control(entrypoint: string): ObjectShader;
+  eval(entrypoint: string): ObjectShader;
+  fragment(entrypoint: string): ObjectShader;
+  overrideObject(reference:string, target:string): ObjectShader;
 
   blendFunc(
         index: number,
@@ -365,7 +425,11 @@ declare class ObjectShader implements Shader<ObjectShader, BuiltObjectShader> {
   target(index: number, tex: BuiltTexture | undefined): ObjectShader;
   ssbo(index: number, buf: BuiltBuffer | undefined): ObjectShader;
   ubo(index: number, buf: BuiltBuffer | undefined): ObjectShader;
-  define(key: string, value: string): ObjectShader;
+
+  exportBool(name : string, value : boolean) : ObjectShader;
+  exportInt(name : string, value : number) : ObjectShader;
+  exportFloat(name : string, value : number) : ObjectShader;
+  exportList(list : BuiltExportList) : ObjectShader;
 
   compile(): BuiltObjectShader;
 }
@@ -373,11 +437,7 @@ declare class ObjectShader implements Shader<ObjectShader, BuiltObjectShader> {
 interface Command {}
 
 declare class Composite implements PostShader<Composite>, Command {
-  vertex(loc: string): Composite;
-  geometry(loc: string): Composite;
-  control(loc: string): Composite;
-  eval(loc: string): Composite;
-  fragment(loc: string): Composite;
+  location(loc : string, entrypoint : string) : Composite;
 
   state(state: StateReference): Composite;
 
@@ -385,7 +445,13 @@ declare class Composite implements PostShader<Composite>, Command {
   target(index: number, tex: BuiltTexture | undefined, mip: number): Composite;
   ssbo(index: number, buf: BuiltBuffer | undefined): Composite;
   ubo(index: number, buf: BuiltBuffer | undefined): Composite;
-  define(key: string, value: string): Composite;
+
+  exportBool(name : string, value : boolean) : Composite;
+  exportInt(name : string, value : number) : Composite;
+  exportFloat(name : string, value : number) : Composite;
+  exportList(list : BuiltExportList) : Composite;
+
+  overrideObject(reference:string, target:string): Composite;
 
   blendFunc(
     index: number,
@@ -399,12 +465,17 @@ declare class Composite implements PostShader<Composite>, Command {
 }
 
 declare class Compute implements PostShader<Compute>, Command {
-  location(loc: string): Compute;
+  location(loc : string, entrypoint : string) : Compute;
   workGroups(x: number, y: number, z: number): Compute;
   ssbo(index: number, buf: BuiltBuffer | undefined): Compute;
   ubo(index: number, buf: BuiltBuffer | undefined): Compute;
-  define(key: string, value: string): Compute;
   state(state: StateReference): Compute;
+
+  exportBool(name : string, value : boolean) : Compute;
+  exportInt(name : string, value : number) : Compute;
+  exportFloat(name : string, value : number) : Compute;
+  exportList(list : BuiltExportList) : Compute;
+  overrideObject(reference:string, target:string): Compute;
 
   compile(): PostPass;
 }
@@ -416,9 +487,15 @@ interface BuiltCombinationPass {}
 
 declare class CombinationPass {
   constructor(location: string);
-  ssbo(index: number, buf: BuiltBuffer | undefined): ObjectShader;
-  ubo(index: number, buf: BuiltBuffer | undefined): ObjectShader;
-  define(key: string, value: string): ObjectShader;
+  ssbo(index: number, buf: BuiltBuffer | undefined): CombinationPass;
+  ubo(index: number, buf: BuiltBuffer | undefined): CombinationPass;
+
+
+  exportBool(name : string, value : boolean) : CombinationPass;
+  exportInt(name : string, value : number) : CombinationPass;
+  exportFloat(name : string, value : number) : CombinationPass;
+  exportList(list : BuiltExportList) : CombinationPass;
+  overrideObject(reference:string, target:string): CombinationPass;
 
   compile(): BuiltCombinationPass;
 }
@@ -471,6 +548,24 @@ declare class Vector3f {
 
     constructor(x : number, y: number, z: number);
     constructor(other : Vector3f);
+
+    x() : number;
+    y() : number;
+    z() : number;
+
+    x(newValue : number) : void;
+    y(newValue : number) : void;
+    z(newValue : number) : void;
+}
+
+declare class Vector3d {
+    /**
+     * Initializes to 0.
+     */
+    constructor();
+
+    constructor(x : number, y: number, z: number);
+    constructor(other : Vector3d);
 
     x() : number;
     y() : number;
@@ -594,6 +689,11 @@ declare class WorldState {
     cameraPos() : Vector3f;
 
     /**
+     * Returns the current fluid the camera is submerged in.
+     */
+    currentFluid() : number;
+
+    /**
      * Return the last frame time (ap.time.delta).
      */
     lastFrameTime() : number;
@@ -663,18 +763,18 @@ interface ActiveTextureReference extends BuiltTexture {
  * @see ArrayTexture
  */
 declare class Texture {
-  private constructor(name: string);
+	private constructor(name: string);
 
-  format(internalFormat: InternalTextureFormat): Texture;
-  clearColor(r: number, g: number, b: number, a: number): Texture;
-  clear(clear: boolean): Texture;
-  mipmap(mipmap: boolean): Texture;
-  width(width: number): Texture;
-  height(height: number): Texture;
-  depth(depth: number): Texture;
-  readBack(read: boolean): Texture;
+	format(internalFormat: InternalTextureFormat): Texture;
+	width(width: number): Texture;
+	height(height: number): Texture;
+	depth(depth: number): Texture;
+	mipmap(mipmap: boolean): Texture;
+	clear(clear: boolean): Texture;
+	clearColor(r: number, g: number, b: number, a: number): Texture;
+	readBack(read: boolean): Texture;
 
-  build(): BuiltTexture;
+	build(): BuiltTexture;
 }
 
 /**

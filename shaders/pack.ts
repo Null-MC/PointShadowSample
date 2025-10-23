@@ -1,5 +1,3 @@
-import type {} from 'iris'
-
 const pointShadow_regionSize = 128;
 const pointShadow_binSize = 8;
 
@@ -83,31 +81,23 @@ export function configurePipeline(pipeline : PipelineConfig) {
         "brown_candle", "red_candle", "orange_candle", "yellow_candle", "lime_candle", "green_candle", "cyan_candle",
         "light_blue_candle", "blue_candle", "purple_candle", "magenta_candle", "pink_candle");
 
+
     const renderConfig = pipeline.getRendererConfig();
 
-    // Define Global Settings
-    let lightListEnabled = false;
-    let lightListBinCount = 0;
+    let lightListEnabled = getBoolSetting('POINT_SHADOW_BIN_ENABLED');
+    let lightListBinCount = getIntSetting('POINT_SHADOW_BIN_COUNT');
 
-    // only define settings when point light shadows are enabled
-    if (renderConfig.pointLight.maxCount > 0) {
-        defineGlobally('POINT_SHADOW_ENABLED', 1);
-        defineGlobally('POINT_SHADOW_MAX_COUNT', renderConfig.pointLight.maxCount);
+    const globalExports = pipeline.createExportList()
+        .addBool('POINT_SHADOW_ENABLED', renderConfig.pointLight.maxCount > 0)
+        .addInt('POINT_SHADOW_MAX_COUNT', renderConfig.pointLight.maxCount)
+        .addBool('POINT_SHADOW_DEBUG', getBoolSetting('POINT_SHADOW_DEBUG'))
+        .addBool('POINT_SHADOW_BIN_ENABLED', lightListEnabled)
+        .addInt('POINT_SHADOW_BIN_REGION', pointShadow_regionSize)
+        .addInt('POINT_SHADOW_BIN_SIZE', pointShadow_binSize)
+        .addInt('POINT_SHADOW_BIN_COUNT', lightListBinCount)
+        .build();
 
-        if (getBoolSetting('POINT_SHADOW_DEBUG'))
-            defineGlobally('POINT_SHADOW_DEBUG', 1);
-
-        lightListEnabled = getBoolSetting('POINT_SHADOW_BIN_ENABLED');
-
-        if (lightListEnabled) {
-            defineGlobally('POINT_SHADOW_BIN_ENABLED', 1);
-            defineGlobally('POINT_SHADOW_BIN_REGION', pointShadow_regionSize);
-            defineGlobally('POINT_SHADOW_BIN_SIZE', pointShadow_binSize);
-
-            lightListBinCount = getIntSetting('POINT_SHADOW_BIN_COUNT');
-            defineGlobally('POINT_SHADOW_BIN_COUNT', lightListBinCount);
-        }
-    }
+    pipeline.setGlobalExport(globalExports);
 
     // Create Textures & Buffers
     const texFinal = pipeline.createTexture('texFinal')
@@ -118,14 +108,15 @@ export function configurePipeline(pipeline : PipelineConfig) {
         .clear(false)
         .build();
 
-    let lightListBuffer: BuiltBuffer | null = null;
     if (lightListEnabled) {
+        pipeline.createBuffer('scene', 4, false);
+
         const binByteSize = 4 * (2 + lightListBinCount);
         const binsPerAxis = Math.ceil(pointShadow_regionSize / pointShadow_binSize);
         const bufferSize = binByteSize * cubed(binsPerAxis) + 4;
         print(`Light-List Buffer Size: ${bufferSize.toLocaleString()}`);
 
-        lightListBuffer = pipeline.createBuffer(bufferSize, false);
+        pipeline.createBuffer('lightBin', bufferSize, false);
     }
 
     // Build Shader Pipeline
@@ -137,27 +128,23 @@ export function configurePipeline(pipeline : PipelineConfig) {
 
         // reset all light bin counters to zero
         preRenderQueue.createCompute('light-list-clear')
-            .location('pre/light-list-clear.csh')
+            .location('pre/light-list-clear', 'clearLightLists')
             .workGroups(binGroupCount, binGroupCount, binGroupCount)
-            .ssbo(0, lightListBuffer)
             .compile();
 
         const pointGroupCount = Math.ceil(renderConfig.pointLight.maxCount / (4*4*4));
 
         // populate local light bins from global light list
         preRenderQueue.createCompute('light-list')
-            .location('pre/light-list.csh')
+            .location('pre/light-list', 'populateBinsFromList')
             .workGroups(pointGroupCount, pointGroupCount, pointGroupCount)
-            .ssbo(0, lightListBuffer)
+            .exportInt('NumWorkGroups', pointGroupCount)
             .compile();
-
-        preRenderQueue.barrier(SSBO_BIT);
 
         // populate neighboring local light bins with current bins data
         preRenderQueue.createCompute('light-list-neighbors')
-            .location('pre/light-list-neighbors.csh')
+            .location('pre/light-list-neighbors', 'populateBinsFromNeighbors')
             .workGroups(binGroupCount, binGroupCount, binGroupCount)
-            .ssbo(0, lightListBuffer)
             .compile();
 
         preRenderQueue.end();
@@ -166,40 +153,30 @@ export function configurePipeline(pipeline : PipelineConfig) {
     if (renderConfig.pointLight.maxCount > 0) {
         // depth rendering pass for point-light shadows
         pipeline.createObjectShader('point-shadow', Usage.POINT)
-            .vertex('gbuffer/shadow-point.vsh')
-            .fragment('gbuffer/shadow-point.fsh')
+            .location('gbuffer/shadow-point')
             .compile();
     }
 
     pipeline.createObjectShader('skybox', Usage.SKYBOX)
-        .vertex('gbuffer/skybox.vsh')
-        .fragment('gbuffer/skybox.fsh')
+        .location('gbuffer/skybox')
         .target(0, texFinal)
         .compile();
 
-    const terrainShader = pipeline.createObjectShader('terrain', Usage.TEXTURED)
-        .vertex('gbuffer/basic.vsh')
-        .fragment('gbuffer/basic.fsh')
+    pipeline.createObjectShader('terrain', Usage.TEXTURED)
+        .location('gbuffer/basic')
         .target(0, texFinal)
-        .define('RENDER_TERRAIN', '1');
+        .exportBool('RENDER_TERRAIN', true)
+        .compile();
 
-    const entitiesShader = pipeline.createObjectShader('entities', Usage.ENTITY_SOLID)
-        .vertex('gbuffer/basic.vsh')
-        .fragment('gbuffer/basic.fsh')
+    pipeline.createObjectShader('entities', Usage.ENTITY_SOLID)
+        .location('gbuffer/basic')
         .target(0, texFinal)
-        .define('RENDER_ENTITIES', '1');
+        .exportBool('RENDER_ENTITIES', true)
+        .compile();
 
-    const finalPass = pipeline.createCombinationPass('post/final.fsh');
-
-    if (lightListEnabled) {
-        terrainShader.ssbo(0, lightListBuffer);
-        entitiesShader.ssbo(0, lightListBuffer);
-        finalPass.ssbo(0, lightListBuffer);
-    }
-
-    terrainShader.compile();
-    entitiesShader.compile();
-    finalPass.compile();
+    pipeline.createCombinationPass('post/final')
+        .overrideObject('texSource', texFinal.name())
+        .compile();
 }
 
 // export function onSettingsChanged(pipeline : PipelineConfig) {
