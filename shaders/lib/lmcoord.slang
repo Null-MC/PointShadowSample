@@ -1,3 +1,5 @@
+public module lmcoord;
+
 static const float lmCoordMin = ( 0.5/16.0);
 static const float lmCoordMax = (15.5/16.0);
 static const float lmCoordRange = lmCoordMax - lmCoordMin;

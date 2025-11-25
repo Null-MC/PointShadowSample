@@ -1,3 +1,5 @@
+public module common;
+
 static const float Gamma = 2.2;
 static const float PointLightBrightness = 8.0;
 

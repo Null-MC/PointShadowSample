@@ -1,3 +1,5 @@
+public module sample;
+
 import aperture;
 import buffers.LightBinBuffer;
 import lib.common;
